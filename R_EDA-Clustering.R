@@ -2,17 +2,18 @@
 #
 # Purpose:  Introduction to clustering - clustering of expression data
 #
-# Version: 1.0
+# Version: 1.1
 #
-# Date:    2016  06  01
+# Date:    2017  06  01
 # Author:  Boris Steipe (boris.steipe@utoronto.ca)
 #
-# V 1.0    First code
+# V 1.1    2017 updates
+# V 1.0    First code 2016
 #
 # TODO:
 #
 #
-# == HOW TO WORK WITH THIS FILE ======================================
+# == HOW TO WORK WITH THIS FILE ================================================
 #
 #  Go through this script line by line to read and understand the
 #  code. Execute code by typing <cmd><enter>. When nothing is
@@ -30,10 +31,11 @@
 #  Google for an answer, or ask me. Don't continue if you don't
 #  understand what's going on. That's not how it works ...
 #
-#  This is YOUR file. Write your notes in here and add as many
-#  comments as you need to understand what's going on here when you
-#  come back to it in a year. That's the right way: keep code, data
-#  and notes all in one place.
+#  Once you have typed and executed the function init(), you will find a file
+#  called myScript.R in the project directory.
+#
+#  Open it, you can place all of your code-experiments and notes into that
+#  file. This will be your "Lab Journal" for this session.
 #
 # ====================================================================
 
@@ -72,13 +74,27 @@ library(limma)
 # Then load series and platform data from GEO ...
 gset <- getGEO("GSE26922", GSEMatrix =TRUE)
 
-if (length(gset) > 1) idx <- grep("GPL6244", attr(gset, "names")) else idx <- 1
+if (length(gset) > 1) {
+    idx <- grep("GPL6244", attr(gset, "names"))
+    }
+else {
+    idx <- 1
+}
 gset <- gset[[idx]]
+
+# Note: getGEO() is patchy. For the workshop, it is probably better to
+#        load the dataset from the backup I have provided.
+# save(gset, file = "GSE26922.RData")
+# load("GSE26922.RData")
+
+
+
 
 # Check what we have
 
 head(gset)
 str(gset)
+
 
 # The code below is pretty much verbatim GEO2R ...
 # ===== (without detailed explanation) ===========
@@ -124,7 +140,8 @@ tT <- tT[setdiff(colnames(tT), setdiff(fvarLabels(gset), "ID"))]
 tT <- merge(tT, ncbifd, by="ID")
 tT <- tT[order(tT$P.Value), ]  # restore correct order
 
-tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","F","Gene.symbol","Gene.title"))
+tT <- subset(tT, select=c("ID","adj.P.Val","P.Value",
+                          "F","Gene.symbol","Gene.title"))
 
 # =========================================
 # so far, the GEO2R code ...
@@ -203,6 +220,9 @@ as.character(gSym[duplicated(gSym)])
 dat <- dat[!duplicated(gSym), ]
 rownames(dat) <- gSym[!duplicated(gSym)]
 
+# We'll also remove all rows that have spots for isoforms.
+dat <- dat[-(grep("/", rownames(dat))), ]
+
 # This completes the creation of our expression dataset for clustering.
 
 # You could store the data in a local file ...
@@ -219,8 +239,11 @@ dat <- as.matrix(read.csv(file="GSE26922.dat",
 # name when you read it back.
 saveRDS(dat,  file="GSE26922.rds")
 
-dat2 <- readRDS("GSE26922.rds")
+dat <- readRDS("GSE26922.rds")
 identical(dat, dat2)  # has to be TRUE !
+
+
+#
 
 
 # ==================================================
@@ -247,9 +270,9 @@ range(dat[,1])
 # Study the heatmap, and consider what it tells you.
 # For example, there seem to be genes that are low at t4 and t6
 # but high at t0, t2 ...
-set1 <- c("TPX2", "CCNA2", "AURKA", "CEP55", "CCNB1")
+set1 <- c("FNIP1", "MED13L", "NRIP1", "MSI2", "ZNFX1")
 # ... and there are genes for which the inverse is true:
-set2 <- c("MAB21L3", "CCNE1", "TCF19///TCF19", "ZBTB14")
+set2 <- c("FBXL20", "CCNE1", "ZBTB14", "HIST1H2AH")
 
 # We can use a "parallel coordinates" plot - matplot()
 # to look at the actual expression levels. Note that
@@ -266,8 +289,8 @@ for (i in 1:length(set2)) {
 }
 
 # Indeed, these genes - visibly different in the heatmap
-# are mutualy similar in their expression profiles and different
-# from each other.
+# have similar expression profiles profiles within sets and different
+# profiles between sets.
 
 # ==================================================
 # Hierarchical clustering
@@ -296,13 +319,6 @@ plot(hc)
 # works for all data. You'll need to explore: what you are looking for
 # is a distance metric that gives the clearest block structure.
 
-if (!require(minerva, quietly=TRUE)) {
-    install.packages("minerva")
-    library(minerva)
-}
-?mine
-
-
 dEu <- function(x) dist(x, method="euclidian")
 heatmap(dat, distfun = dEu)
 
@@ -326,6 +342,12 @@ heatmap(dat, distfun = dCor)
 # ... and a similar one with the maximum information
 # coefficient (MIC) as implemented in the minerva
 # package
+if (!require(minerva, quietly=TRUE)) {
+    install.packages("minerva")
+    library(minerva)
+}
+?mine
+
 dMIC <- function(x) as.dist(mine(t(x))$MIC)
 heatmap(dat, distfun = dMIC)
 
@@ -333,9 +355,6 @@ heatmap(dat, distfun = dMIC)
 # really obvious ...
 
 hc <- hclust(dMax(dat))
-
-
-
 
 # Back to our original dendrogram ...
 plot(hc)
@@ -444,7 +463,8 @@ par(oPar)
 # of relative values.
 
 # Here is a package that adresses the dynamic range problem.
-# Read about it here: http://cran.r-project.org/web/packages/dynamicTreeCut/dynamicTreeCut.pdf
+# Read about it here:
+# http://cran.r-project.org/web/packages/dynamicTreeCut/dynamicTreeCut.pdf
 if (!require(dynamicTreeCut, quietly=TRUE)) {
     install.packages("dynamicTreeCut")
     library(dynamicTreeCut)
@@ -476,7 +496,9 @@ distDatNorm <-dist(datNorm)
 
 hc.Norm <-hclust(distDatNorm)
 
-class.dynamic <- cutreeDynamic(dendro = hc.Norm, distM = as.matrix(distDatNorm), cutHeight=15)
+class.dynamic <- cutreeDynamic(dendro = hc.Norm,
+                               distM = as.matrix(distDatNorm),
+                               cutHeight=15)
 
 niceCols <- brewer.pal(6, "Spectral")
 
@@ -509,11 +531,11 @@ par(oPar)
 ?kmeans
 
 k <- 4
-cl<-kmeans(dat, k)
+cl <- kmeans(dat, k)
 
 niceCols <- brewer.pal(k, "Spectral")
 
-plot(dat[,"t0"],dat[,"t6"],col=niceCols[cl$cluster])
+plot(dat[,"t2"], dat[,"t6"], col = niceCols[cl$cluster])
 points(cl$centers, col = niceCols[1:k], pch = 8, cex=2)
 
 # But: be aware ...
@@ -530,7 +552,7 @@ if (!require(cluster, quietly=TRUE)) {
 set.seed(112358)
 k <- 4
 cl<-pam(dat, 4)
-plot(dat[,"t0"],dat[,"t6"], col=niceCols[cl$cluster])
+plot(dat[,"t2"],dat[,"t6"], col=niceCols[cl$cluster])
 plot(cl) # shows boundary and silhouette plots
 
 # ==================================================
@@ -550,10 +572,6 @@ apRes
 
 heatmap(apRes)
 
-# try this on the normalized data
-apRes <- apcluster(negDistMat(r=2), datNorm)
-heatmap(apRes)
-
 # The clear and pronounced block structure shows that this
 # is a successful clustering...
 
@@ -561,12 +579,12 @@ length(apRes)
 cutree(apRes)
 
 oPar <- par(mfrow=c(3,2))
-matplot(t(datNorm[unlist(apRes[2]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(datNorm[unlist(apRes[3]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(datNorm[unlist(apRes[8]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(datNorm[unlist(apRes[14]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(datNorm[unlist(apRes[15]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(datNorm[unlist(apRes[9]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(dat[unlist(apRes[2]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(dat[unlist(apRes[3]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(dat[unlist(apRes[8]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(dat[unlist(apRes[14]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(dat[unlist(apRes[15]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(dat[unlist(apRes[9]),]),type="l",xlab="time",ylab="log expression value")
 par(oPar)
 
 # ==================================================
@@ -654,8 +672,6 @@ plotProgress <- function(x){
 set.seed(112358)
 tsneDat <- tsne(dat, epoch_callback = plotProgress)
 
-# presumably the outliers here are due to the non-normalized
-# data ....
 
 # I've run this many times to find a
 # seed that gives a low error, and run until the iteration
@@ -663,8 +679,8 @@ tsneDat <- tsne(dat, epoch_callback = plotProgress)
 
 # ... this will run a few minutes  :-)
 set.seed(270745)
-tsneRef <- tsne(datNorm,
-                epoch = 1000, max_iter=8000,
+tsneRef <- tsne(dat,
+                epoch = 200, max_iter=8000,
                 epoch_callback = plotProgress, perplexity=10)
 
 
