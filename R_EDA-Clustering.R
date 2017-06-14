@@ -470,7 +470,9 @@ if (!require(dynamicTreeCut, quietly=TRUE)) {
     library(dynamicTreeCut)
 }
 
-class.dynamic <- cutreeDynamic(dendro = hc.ward, distM = as.matrix(distDat), cutHeight=100)
+class.dynamic <- cutreeDynamic(dendro = hc.ward,
+                               distM = as.matrix(distDat),
+                               cutHeight=100)
 
 niceCols <- brewer.pal(8, "Spectral")
 
@@ -567,7 +569,7 @@ if (!require(apcluster, quietly=TRUE)) {
     library(apcluster)
 }
 
-apRes <- apcluster(negDistMat(r=2), dat)
+apRes <- apcluster(negDistMat(r=2), datNorm)
 apRes
 
 heatmap(apRes)
@@ -579,12 +581,12 @@ length(apRes)
 cutree(apRes)
 
 oPar <- par(mfrow=c(3,2))
-matplot(t(dat[unlist(apRes[2]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(dat[unlist(apRes[3]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(dat[unlist(apRes[8]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(dat[unlist(apRes[14]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(dat[unlist(apRes[15]),]),type="l",xlab="time",ylab="log expression value")
-matplot(t(dat[unlist(apRes[9]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(datNorm[unlist(apRes[ 2]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(datNorm[unlist(apRes[ 3]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(datNorm[unlist(apRes[ 8]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(datNorm[unlist(apRes[14]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(datNorm[unlist(apRes[15]),]),type="l",xlab="time",ylab="log expression value")
+matplot(t(datNorm[unlist(apRes[ 9]),]),type="l",xlab="time",ylab="log expression value")
 par(oPar)
 
 # ==================================================
@@ -670,7 +672,7 @@ plotProgress <- function(x){
 }
 
 set.seed(112358)
-tsneDat <- tsne(dat, epoch_callback = plotProgress)
+tsneDat <- tsne(datNorm, epoch_callback = plotProgress)
 
 
 # I've run this many times to find a
@@ -867,8 +869,9 @@ pickGenes <- function(x) {
     # initialize:
     all <- c()
     dev.set(w2)  # set focus on a second window ...
-    matplot(t(datNorm[set1,]), type="n",   # ... empty frame for paralell coordinates
-            xlab="time",ylab="log expression value")
+    matplot(t(datNorm[set1,]), type="n",   # ... empty frame for this plot
+            xlab="time",
+            ylab="log expression value")
     dev.set(w1) # focus back on window 1
     # This is the main picking loop.
     while(TRUE) {
@@ -881,8 +884,8 @@ pickGenes <- function(x) {
         # First, overwrite the point with
         # a semi-transparent white point...
         points(x[pick,1], x[pick,2], pch=19, cex=0.8, col="#FFFFFFAA")
-        print(pick)                          # ... then print the row to console ...
-        all <- c(all, pick)                  # ... and add it to the results vector.
+        print(pick)                          # ...  print the row to console ...
+        all <- c(all, pick)                  # ... and add it to the results.
         dev.set(w2)                          # Set focus to window 2 ...
         # ... and draw one expression profile
         # into the matplot() frame.
@@ -949,7 +952,11 @@ sel <- function(pp) {
     # draw the paralell coordinates into the second window
     dev.set(w2)
     for (i in 1:length(selected)) {
-        lines(datNorm[selected[i], ], type="l", lwd=1, lty=1, col=colV[selected[i]])
+        lines(datNorm[selected[i], ],
+              type="l",
+              lwd=1,
+              lty=1,
+              col=colV[selected[i]])
     }
     dev.set(w1)
 
@@ -1008,7 +1015,12 @@ plotTsne3D <- function(x){
 # into.
 
 set.seed(112358)
-tsne3D <- tsne(datNorm, epoch = 100, k=3, max_iter=3000, epoch_callback = plotTsne3D, perplexity=10)
+tsne3D <- tsne(datNorm,
+               epoch = 100,
+               k=3,
+               max_iter=3000,
+               epoch_callback = plotTsne3D,
+               perplexity=10)
 
 # ==================================================
 # outlook: classification
